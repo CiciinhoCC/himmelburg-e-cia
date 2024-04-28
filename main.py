@@ -1,260 +1,154 @@
-import numpy as np
-        
-class Ataque:
-    def __init__(self, nome, stats, stats_i):
-        self.nome = nome
-        self.stats = stats
-        self.stats_i = stats_i
-        self.rolagem = 0
-
-    def __str__(self):
-        stats_str = ''
-        stat_types = ['atk','blk','esq','cat']
-        for ind, i in enumerate(self.stats):
-            if i != 0:
-                stats_str += f'{i} {stat_types[ind]} '
-        for ind, i in enumerate(self.stats_i):
-            if i != 0:
-                stats_str += f'{i} {stat_types[ind]}-I '
-
-
-        return f"{self.nome} - {stats_str}"
-
-class Arma(Ataque):
-    def __init__(self,nome,stats, stats_i, ataques, rolagem):
-        super().__init__(nome, stats, stats_i)
-        self.ataques = list(Ataque("ataque", self.stats,self.stats_i)+ataques)
-        self.rolagem = rolagem
-
-    def __str__(self):
-        ataques = ''
-        rolagem = ['força', 'resistência', 'agilidade','percepção','inteligência'][self.rolagem]
-        for i in self.ataques:
-            ataques += f'{str(i)} \n'
-        return f'{self.nome}: \n rolagem: {rolagem} \n {ataques}'
-
-class ArteEMagia(Ataque):
-    def __init__(self,nome,stats, stats_i, ataques, rolagem):
-        super().__init__(nome, stats, stats_i)
-
-        self.rolagem = rolagem
-        self.ataques = ataques
-
-        for i in self.ataques:
-            i.stats = np.add(i.stats,self.stats)
-            i.stats_i = np.add(i.stats_i,self.stats_i)
-
-    def __str__(self):
-        stats_str = ''
-        stat_types = ['atk','blk','esq','cat']
-        for ind, i in enumerate(self.stats):
-            if i != 0:
-                stats_str += f'{i} {stat_types[ind]} '
-        for ind, i in enumerate(self.stats_i):
-            if i != 0:
-                stats_str += f'{i} {stat_types[ind]}-I '
-        
-        rolagem = ['força', 'resistência', 'agilidade','percepção','inteligência'][self.rolagem]
-
-        ataques = ''
-        for i in self.ataques:
-            ataques += f'{str(i)} \n'
-        return f'{self.nome}: \n {stats_str} \n rolagem: {rolagem} \n {ataques}'
+from classes import Ataque, Arma, ArteEMagia, Armadura, Personagem
+# ARMAS
     
-class Armadura(Ataque):
-    def __init__(self,nome,stats, stats_i, vida):
-        super().__init__(nome, stats, stats_i)
-        self.vida = vida
+## GOLPES
 
-    def __str__(self):
-            stats_str = ''
-            stat_types = ['atk','blk','esq','cat']
-            for ind, i in enumerate(self.stats):
-                if i != 0:
-                    stats_str += f'{i} {stat_types[ind]} '
-            for ind, i in enumerate(self.stats_i):
-                if i != 0:
-                    stats_str += f'{i} {stat_types[ind]}-I '
-
-
-            return f"{self.nome} - {stats_str}. {self.vida} vida"
-
-class Personagem:
-    def __init__(self, nome, stats, level, defesa, armas, artes, magias, armadura):
-        self.nome = nome
-        self.stats = stats
-        self.level = level
-        self.armadura = armadura
-        self.armadura_stats = {
-            'stats': 0,
-            'stats_i': 0,
-            'vida': 0
-        }
-        for i in self.armadura:
-            if i != 0:
-                self.armadura_stats['stats']=np.add(i.stats, self.armadura_stats['stats'])
-                self.armadura_stats['stats_i']=np.add(i.stats_i, self.armadura_stats['stats_i'])
-                self.armadura_stats['vida']= i.vida + self.armadura_stats['vida']
-        self.vida = stats[1] * (2+level+defesa)
-
-        self.armas = armas
-        self.artes = artes
-        self.magias = magias
-
-        self.ataques = []
-        self.ataques.append(Ataque('sem arma',[0,2,2,0],[0,0,0,0]))
-        for i in self.armas:
-            for j in i.ataques:
-                j.nome += f" ({i.nome})"
-                j.rolagem = i.rolagem
-                self.ataques.append(j)
-        for i in self.artes:
-            for j in i.ataques:
-                j.nome += f" ({i.nome})"
-                j.rolagem = i.rolagem
-                self.ataques.append(j)
-        for i in self.magias:
-            for j in i.ataques:
-                j.nome += f" ({i.nome})"
-                j.rolagem = i.rolagem
-                self.ataques.append(j)
-    
-    def get_ataque(self):
-        print(f'Stats: {self.get_stats()}')
-        for ind,i in enumerate(self.ataques):
-            print(f'{ind} - {str(i)}\n')
-    
-        inp = input(">> selecione um ataque: ")
-        while True:
-            if self.ataques[int(inp)]:
-                break
-            inp = input(">> selecione um ataque: ")
-        return self.ataques[int(inp)]
-    
-    def atacar(self, player, dist, cat):
-        print(f'------------ \n Como {self.nome} vai atacar {player.nome}? \n ------------')
-        golpe = self.get_ataque()
-        if cat and dist:
-            ataque = golpe.stats[0] + max(self.stats[1:3])
-        elif cat and not dist:
-            ataque = golpe.stats[0] + max(self.stats[0:2])
-        elif dist and not cat:
-            ataque = golpe.stats[0] + self.stats[3]
-        elif self.stats[golpe.rolagem] > self.stats[0]:
-            ataque = golpe.stats[0] + self.stats[ataque.rolagem]
-        else:
-            ataque = golpe.stats[0] + self.stats[0]
-        dano = int(np.round((ataque + self.level + self.armadura_stats['stats'][0])/3))
-        print(f'------------ \n Como {player.nome} se defenderá de {ataque} de ataque? \n ------------')
-        block = player.get_ataque()
-        if player.stats[1] + block.stats[1] + golpe.stats_i[1] > player.stats[2] + block.stats[2] + golpe.stats_i[2]:
-            defesa = block.stats[1] + player.stats[1] + golpe.stats_i[1]
-        else:
-            defesa = block.stats[2] + player.stats[2] + golpe.stats_i[2]
-        if ataque <=0:
-            print(f'{self.nome} perde')
-        elif defesa <=0:
-            print(f'{player.nome} perde, {self.get_dados(dano)} ({dano}) de dano')
-        else:
-            print(f'{defesa} de defesa')
-            print(f'{self.nome} rola {self.get_dados(ataque)}, {player.nome} rola {self.get_dados(defesa)}')
-            print (f'se {self.nome} ganhar, rola {self.get_dados(dano)} ({dano}) de dano')
-            cat = input(f'>> se {player.nome} ganhar ele pode contra-atacar, digite "S" se ele vai: ')
-            if cat == 'S':
-                player.atacar(self, dist, True)
-            else:
-                quit()
-
-    def get_dados(self,valor):
-        dados = ['','d4','d6','d8','d10','d12','d20']
-        d20 = int(np.floor(valor/6))
-        d_outros = valor % 6
-        if d_outros == 0:
-            return f'{d20}d20'
-        elif d20 >= 1:
-            return f'{d20}d20 + {dados[d_outros]}'
-        else:
-            return dados[d_outros]
-
-    def get_stats(self):
-        stat_type = ['frc','res','agi','prc','int']
-        stats_str = ''
-        for ind, i in enumerate(self.stats):
-                if i != 0:
-                    stats_str += f'{i} {stat_type[ind]} '
-        return stats_str
-    
-    def get_armadura(self):
-        stat_types = ['atk','blk','esq','cat']            
-        armadura_stats = '' 
-        armadura_stats_i = ''            
-        for ind, i in enumerate(self.armadura_stats['stats']):
-                if i != 0:
-                    armadura_stats += f'{i} {stat_types[ind]} '
-        for ind, i in enumerate(self.armadura_stats['stats_i']):
-                if i != 0:
-                    armadura_stats_i += f'{i} {stat_types[ind]}-I '
-        return (armadura_stats, armadura_stats_i)
+arremesso_lanca = Ataque('arremesso',[3,0,0],[0,-2,-1],3)
+empalar = Ataque('empalar',[4,0,0],[0,-2,0])
+rajada_lanca = Ataque('rajada (armas)',[2,0,0],[0,-2,-2],3)
+golpe_relampago = Ataque('golpe relâmpago',[4,0,2],[0,0,-2])
+corte_voador = Ataque('corte voador',[3,0,0],[0,-1,-2],3)
+salto_katana = Ataque('salto (armas)',[2,0,4],[0,0,0])
+queima_roupa = Ataque('queima-roupa',[5,0,0],[0,-1,-1])
+fuzilada = Ataque('fuzilada',[3,0,0],[0,-2,-10], 3)
+redemoinho = Ataque('redemoinho',[2,2,0],[0,-1,-1])
+avancada_grab = Ataque('avançada (grab)',[3,0,0],[0,-1,0])
+avancada_golpe = Ataque('avançada (3 golpes)',[2,0,0],[0,1,0])
+vendaval = Ataque('vendaval',[3,0,0],[0,-1,-1],3)
+quebra_cranio_grab = Ataque('quebra-crânio (grab)',[3,0,0],[0,-1,0])
+quebra_cranio_golpe = Ataque('quebra-crânio (2 golpes)',[4,0,0],[0,1,0])
+arremesso_faca = Ataque('arremesso',[3,0,0], [0,-2,-2],3)
+meia_luas = Ataque('meia luas',[4,0,0],[0,-2,-1])
+redemoinho_montante = Ataque('redemoinho',[4,2,0],[0,-1,0])
 
 
+guspir_acido = Ataque('guspir ácido',[4,1,0],[0,-2,0])
+rabada = Ataque('rabada',[4,0,0],[0,-2,-10])
 
+enraizar = Ataque('enraizar',[4,0,0],[0,-2,-10])
+chicoteada = Ataque('chicoteada',[5,0,0],[0,-2,-1])
 
-    def __str__(self):
-        stats_str = self.get_stats()
-        armadura_stats, armadura_stats_i = self.get_armadura()
-        armadura_vida = self.armadura_stats["vida"]
-        
-        armas = ''
-        artes = ''
-        magias = ''
-        armadura = ''
-        for i in self.armas:
-            armas += f'{str(i)}'
-        for i in self.artes:
-            artes += f'{str(i)}'
-        for i in self.magias:
-            magias += f'{str(i)}'
-        for i in self.armadura:
-            armadura += f'{str(i)} \n' if i != 0 else ' '
-        armadura += f'total: {armadura_stats}{armadura_stats_i}{armadura_vida} vida'
+## ARMAS
 
-        return f'--{self.nome}-- \n level {self.level}, {self.vida}({self.vida + armadura_vida}) vida \n {stats_str} \n -armas- \n {armas} \n -artes marciais- \n {artes} \n -magias- \n {magias} \n -armadura- \n {armadura}'
-        
+lanca = Arma('lança', [3,3,0],[0,0,0],[arremesso_lanca,empalar,rajada_lanca],0)
+katana = Arma('katana', [4,0,3],[0,0,0],[golpe_relampago,corte_voador,salto_katana],2)
+pistola = Arma('pistola', [5,-10,0], [0,-3,-10],[queima_roupa,fuzilada],3)
+espada = Arma('espada',[3,3,1],[0,0,0],[redemoinho,avancada_grab,avancada_golpe,corte_voador])
+alabarda = Arma('alabarda',[3,3,1],[0,0,0],[empalar,vendaval,quebra_cranio_grab,quebra_cranio_golpe])
+faca = Arma('faca',[2,0,4],[0,-1,0],[arremesso_faca],2)
+garra = Arma('garra', [3,0,3],[0,0,-1],[corte_voador],2)
+escudo = Arma('escudo',[2,4,0],[0,0,-1],[],1)
+espada_dupla = Arma('espadas duplas',[3,0,2],[0,-1,0],[meia_luas,golpe_relampago],2)
+montante = Arma('montante',[3,3,0],[0,-1,-1],[redemoinho_montante])
 
-
-
-
+tubarao = Arma('tubarão',[4,0,0],[0,-10,-2],[guspir_acido,rabada])
+arvore = Arma('árvore',[3,3,0],[0,0,0],[enraizar,chicoteada])
 
 # MAGIAS
 
 ## FEITIÇOS
 
-rajada = Ataque('rajada', [3,2,0,2],[0,0,0,0])
-explosao = Ataque('explosão', [3,2,0,0], [0,-10,0,0])
+tiro = Ataque('tiro', [2,0,0],[0,0,0])
+rajada = Ataque('rajada', [4,3,0],[0,0,0], 3)
+rajada_melee = Ataque('rajada de perto', [4,3,0],[0,0,0])
+explosao = Ataque('explosão', [3,2,0], [0,-10,0])
+explosao_pos = Ataque('explosão posicionada', [2,2,0], [0,-10,0],3)
+salto = Ataque('salto',[0,0,5],[0,0,0])
+
+pilastra = Ataque('pilastra', [5,3,0],[0,-2,-2])
+acorrentar = Ataque('acorrentar', [4,0,0],[0,1,1])
 
 ## ELEMENTOS
 
-ar = ArteEMagia('ar',[-1,0,0,0],[0,-2,-1,0],[rajada,explosao],0)
+golpes_magia = [tiro,rajada,rajada_melee,explosao,salto]
+
+golpes_redward = [pilastra,acorrentar]
+
+agua = ArteEMagia('água',[0,-1,0],[0,-1,0],golpes_magia,0)
+terra = ArteEMagia('terra',[2,0,0],[0,0,1],golpes_magia,0)
+fogo = ArteEMagia('fogo',[1,0,0],[0,0,0],golpes_magia,0)
+ar = ArteEMagia('ar',[-1,0,0],[0,-2,-1],golpes_magia,0)
+raio = ArteEMagia('raio',[-1,0,0],[0,0,-2],golpes_magia,0)
+
+magma = ArteEMagia('magma',[3,0,0],[0,0,1],golpes_magia,0)
+
 
 # ARTES MARCIAIS
 
 ## TÉCNICAS
 
-soco = Ataque('soco', [2,0,0,0], [0,0,0,0])
-voadora = Ataque('voadora', [3,0,2,2],[0,0,0,0])
+soco = Ataque('soco', [2,0,0], [0,0,0])
+voadora = Ataque('voadora', [3,0,3],[0,0,-1])
+estrondo = Ataque('estrondo', [3,2,0],[0,-10,0])
+ofensiva_grab = Ataque('ofensiva (grab)', [3,0,0],[0,0,1])
+ofensiva_golpe = Ataque('ofensiva (3 golpes)', [2,0,0],[0,1,0])
+tiro = Ataque('tiro', [3,2,0],[0,-1,-1])
+
 
 ## ESTILOS
 
-combate_basico = ArteEMagia('combate básico', [0,0,0,0],[0,0,0,0],[soco,voadora],0)
+golpes_artes = [soco,voadora,estrondo]
+golpes_artes_mestre = [ofensiva_grab,ofensiva_golpe,tiro]
+
+punho_marinheiro = ArteEMagia('punho do marinheiro',[-1,0,0],[0,0,0],golpes_artes,2)
+punho_marinheiro_c75 = ArteEMagia('punho do marinheiro',[1,0,1],[0,1,0],golpes_artes,2)
+
+soco_ardente_c0 = ArteEMagia('soco ardente',[-1,0,0],[0,0,0],golpes_artes)
+soco_ardente_c25 = ArteEMagia('soco ardente',[0,0,1],[0,0,0],golpes_artes)
+soco_ardente_c50 = ArteEMagia('soco ardente',[0,-1,1],[0,0,-1],golpes_artes)
+soco_ardente_c75 = ArteEMagia('soco ardente',[0,-1,2],[0,0,-1],golpes_artes)
+
+combate_basico = ArteEMagia('combate básico', [0,0,0],[0,0,0],golpes_artes,0)
+combate_basicao = ArteEMagia('combate basicão', [0,0,0],[0,0,0],[soco],0)
+
+canela_aco = ArteEMagia('canela de aço',[1,0,-1],[0,0,0],golpes_artes)
+canela_aco_m3 = ArteEMagia('canela de aço',[2,0,-1],[0,0,1],golpes_artes)
 
 # ARMADURA
 
-armadura_couro = Armadura('armadura de couro', [2,0,0,0], [0,0,0,0], 4)
+armadura_couro = Armadura('armadura de couro', [2,0,0], [0,0,0], 4)
+tunica_tubarao = Armadura('túnica de tubarão', [2,1,1], [0,0,0], 5)
+kimono = Armadura('kimono', [2,0,0], [0,0,0], 4)
+capacete_ferro = Armadura('capacete de ferro',[0,0,0],[0,0,0],2)
+armadura_ferro = Armadura('armadura de ferro',[0,2,-1],[0,0,0],4)
+armadura_tubarao = Armadura('armadura de tubarão',[1,2,0],[0,0,0],5)
+bracelete_rubro = Armadura('bracelete rubro', [1,0,0],[0,0,0])
+manopla_bronze = Armadura('manopla de bronze', [0,2,0],[0,0,0])
+manopla_tubarao = Armadura('manopla de tubarão', [0,3,0],[0,0,0], 2)
+amuleto_esq = Armadura('amuleto de amazonita (esq)', [0,0,2],[0,0,0])
+capa_fleoganhere = Armadura('capa da fleoganhere',[1,0,2],[0,-1,0])
 
 
 # PERSONAGENS
 
-osel = Personagem('osel',[4,3,3,2,3], 2, 0, [], [combate_basico], [ar], [0,armadura_couro,0,0])
+osel = Personagem('osel',[4,3,3,2,3],5,1,[espada_dupla], [canela_aco_m3], [ar], [0,tunica_tubarao,manopla_bronze,0])
+japa = Personagem('o japa',[2,3,5,4,1],5,3,[katana,pistola,faca], [combate_basico], [], [0,tunica_tubarao,amuleto_esq,0])
+vort = Personagem('vortigern',[4,5,2,1,3],5,2,[lanca, escudo, garra],[combate_basico],[fogo.add([explosao_pos])],[capacete_ferro,armadura_tubarao,manopla_tubarao,bracelete_rubro])
+marcos = Personagem('marcos',[3,4,4,2,2],6,0,[],[punho_marinheiro_c75],[],[0,armadura_couro,0,0])
 
-osel.atacar(osel,False,False)
-            
+pirata = Personagem('pirata',[3,4,4,2,2],2,0,[espada],[combate_basico],[agua],[0,0,0,0])
+guarda_himmellburg = Personagem('guarda de himmelburg',[3,4,3,3,2],4,0,[espada],[],[fogo],[0,0,0,0])
+guarda_himmellburg_raio = Personagem('guarda de himmelburg',[2,3,4,4,2],4,0,[espada],[],[raio],[0,0,0,0])
+guarda_marmore = Personagem('guarda de mármore',[4,3,3,3,2],2,0,[alabarda],[],[terra],[0,0,0,0])
+
+dente_fogo = Personagem('dente-de-fogo', [5,5,2,4,1],18,0,[tubarao],[],[],[0,0,0,0])
+
+pugilista_ep3 = Personagem('pugilista (ep3)',[4,3,3,3,2], 3, 0, [], [punho_marinheiro_c75], [raio], [0,0,amuleto_esq,0])
+guerreiro_ep3 = Personagem('guerreiro (ep3)',[4,4,3,2,2], 3, 0, [espada], [], [], [0,0,bracelete_rubro,0])
+mago_ep3 = Personagem('mago (ep3)',[2,3,3,5,2],3,1,[],[],[terra],[0,0,manopla_bronze,0])
+
+driade = Personagem('dríade',[7,6,2,2,1],5,0,[arvore],[],[],[0,0,0,0])
+
+drakenkemp = Personagem('drakenkemp',[4,3,7,4,3],10,0,[espada_dupla.imbue(soco_ardente_c75)],[soco_ardente_c75.add(golpes_artes_mestre)],[],[0,armadura_ferro,capa_fleoganhere,0])
+redward = Personagem('redward',[6,5,2,6,2],10,0,[],[combate_basicao.imbue(terra)],[magma,terra.add(golpes_redward)],[0,armadura_ferro,capa_fleoganhere,0])
+
+
+#japa.atacar(drakenkemp)
+
+driade.atacar(osel.buffar([0,-2,-2]))
+
+# barco himmelburg:
+## 100 vida, 3 vel, 6 man, 3 estab, 4 alc, 5 cool, 10 dano
+
+#todo
+#+1 esquiva katana do japa
